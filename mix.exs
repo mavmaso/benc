@@ -46,7 +46,8 @@ defmodule Benc.MixProject do
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:jason, "~> 1.2"},
-      {:bandit, ">= 0.6.10"}
+      {:bandit, ">= 0.6.10"},
+      {:rustler, "~> 0.27.0"}
     ]
   end
 
