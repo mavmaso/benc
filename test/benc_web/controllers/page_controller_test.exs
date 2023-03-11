@@ -1,5 +1,5 @@
 defmodule BencWeb.PageControllerTest do
-  use BencWeb.ConnCase
+  use BencWeb.ConnCase, async: true
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")

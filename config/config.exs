@@ -18,6 +18,7 @@ config :benc, BencWeb.Endpoint,
     layout: false
   ],
   pubsub_server: Benc.PubSub,
+  adapter: Bandit.PhoenixAdapter,
   live_view: [signing_salt: "cTk7NS/r"]
 
 # Configure esbuild (the version is required)
