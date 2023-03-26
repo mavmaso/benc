@@ -1,4 +1,6 @@
+mod outro;
 
+use outro::*;
 use std::collections::HashMap;
 use rustler::{Atom, Error, NifMap, NifResult, types::atom::ok};
 use csv::{ReaderBuilder};
@@ -6,19 +8,10 @@ use csv::{ReaderBuilder};
 #[derive(NifMap)]
 pub struct CsvData{
     placeholders: Vec<String>,
-    destination_count: i32,
+    destination_count: usize,
+    data: Vec<Vec<String>>,
     example_data: HashMap<String, String>
 }
-
-fn valid_bit(s: &str) -> u8{
-    match s {
-        ";" => b';',
-        "|" => b'|',
-        "\t" => b'\t',
-        _ => b',',
-    }
-}
-
 
 #[rustler::nif]
 fn csv_reader(path: String, separator: String) ->  NifResult<(Atom, CsvData)>{
@@ -28,37 +21,45 @@ fn csv_reader(path: String, separator: String) ->  NifResult<(Atom, CsvData)>{
         .map_err(|_| Error::Atom("file_not_found"))?;
 
     let placeholders = file.headers()
-        .map_err(|_| Error::Atom("no_header"))?
-        .iter().map(|s| s.to_string()).collect::<Vec<String>>();
+        .map_err(|_| Error::Atom("header_error"))?
+        .iter()
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
 
-    // let example_data = match file.records().next() {
-    //     Some(Ok(record)) => {
-    //         let keys = placeholders.clone().into_iter();
-    //         let values = record.iter().map(|s| s.to_string()).collect::<Vec<String>>();
-    //         if keys.len() == values.len() {
-    //             keys.zip(values).collect()
-    //         } else {
-    //             return Err(Error::Atom("example_data_error"));
-    //         }
-    //     },
-    //     Some(Err(_)) => return Err(Error::Atom("failed_to_read_first_row")),
-    //     None => return Err(Error::Atom("no_rows_found")),
-    // };
+    if placeholders.is_empty() { return Err(Error::Atom("no_header")) }
 
-    let example_data = HashMap::new();
+    let first_row = get_first_row(&path, valid_bit(&separator));
+    let example_data = match first_row {
+        Some(Ok(record)) => {
+            let keys = placeholders.clone().into_iter();
+            let values = record.iter().map(|s| s.to_string()).collect::<Vec<String>>();
 
-    let mut destination_count = 0;
+            keys.zip(values).collect()
+        },
+        Some(Err(_)) => return Err(Error::Atom("failed_to_read_first_row")),
+        None => return Err(Error::Atom("no_rows_found")),
+    };
+
+    let mut data:Vec<Vec<String>> = vec![];
+
     for row in file.records() {
         match row {
-            Ok(_) => destination_count += 1,
+            Ok(r) => {
+                let line = r.into_iter()
+                    .map(|f| f.to_string())
+                    .collect();
+
+                data.push(line);
+            },
             Err(_) => return Err(Error::Atom("row_format")),
         }
     };
 
     let csv_data = CsvData {
-        destination_count,
+        destination_count: data.len(),
         placeholders,
-        example_data,
+        data,
+        example_data
     };
 
     Ok((ok(), csv_data))
